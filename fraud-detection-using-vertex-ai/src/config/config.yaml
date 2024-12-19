@@ -1,0 +1,8 @@
+# Centralized configuration settings
+
+gcp_project_id: "fraud-detection-mlops"
+bucket_name: "fraud-detection-data-bucket"
+train_data: "data/raw/fraud_train_preprocessed.csv"
+test_data: "data/raw/fraud_test_preprocessed.csv"
+model_name: "fraud_detection_model"
+region: "us-central1"

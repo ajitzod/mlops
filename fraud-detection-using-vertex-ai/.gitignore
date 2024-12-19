@@ -1,0 +1,24 @@
+# Python
+*.pyc
+__pycache__/
+
+# Environment Variables
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Logs and Artifacts
+artifacts/
+logs/
+
+# Cloud Credentials
+src/config/credentials.json
+
+# Docker
+*.dockerignore
+docker-compose.yml
+
+# IDEs
+.vscode/
+.idea/
