@@ -10,21 +10,41 @@ This project leverages Google Cloud's Vertex AI to build, deploy, and monitor an
 ## Folder Structure
 ```
 fraud-detection-vertex-ai/
-├── .github/              # GitHub-specific workflows and templates
-├── docs/                 # Project documentation
-├── data/                 # Data storage
-├── notebooks/            # Jupyter notebooks
-├── src/                  # Core project code
-├── tests/                # Automated tests
-├── artifacts/            # Generated artifacts (models, logs, etc.)
-├── infrastructure/       # Infrastructure setup (Docker, Terraform, etc.)
-├── .env                  # Environment variables
-├── .gitignore            # Ignored files for Git
-├── LICENSE               # Licensing information
-├── README.md             # Project overview
-├── requirements.txt      # Python dependencies
-├── setup.py              # Installation setup
-└── Makefile              # Automation commands
+│
+├── data/                                # For datasets
+│   ├── raw/                             # Raw unprocessed data
+│   ├── processed/                       # Preprocessed data
+│   └── README.md                        # Data documentation
+│
+│
+├── src/                                 # Core Python modules
+│   ├── config/                          # Configuration files
+│   │   ├── config.yaml                  # Centralized settings
+│   ├── data/                            # Data handling modules
+│   │   ├── loader.py                    # Read raw data
+│   │   ├── preprocessing.py             # Preprocess raw data
+│   ├── model/                           # Model training and inference
+│   │   ├── trainer.py                   # Train the model
+│   │   ├── evaluator.py                 # Evaluate the model
+│   ├── monitoring/                      # Monitoring and drift detection
+│   │   ├── drift_detection.py           # Detect model/data drift
+│   │   └── performance_monitor.py       # Monito
+│   ├── utils/                           # Utility scripts
+│   │   ├── logger.py                    # Logging utilities
+│   │   ├── gcp_client.py                # GCP interaction
+│   │   └── helpers.py                   # Shared helper functions
+│   └── main.py                          # Entry point for the pipeline
+│
+├── tests/                               #
+│   ├── unit.py                          # Unit tests
+│   ├── integration.py                   # Testing
+│
+├── requirements.txt                     # Python dependencies
+├── setup.py                             # Package setup
+├── README.md                            # Project documentation
+├── .env                                 # Environment variables
+├── .gitignore                           # Ignore temp/sensitive files
+
 ```
 
 ## Key Features
