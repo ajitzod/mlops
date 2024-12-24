@@ -1,146 +1,137 @@
-Deployment Documentation
+# Deployment Documentation
 
-This document outlines the step-by-step process to deploy the fraud detection model on Google Cloud Vertex AI and enable end-to-end production-grade monitoring and prediction capabilities.
+This document is designed to guide you step-by-step through deploying the fraud detection model to **Google Cloud Vertex AI**. It ensures seamless integration of model training, deployment, and monitoring for real-world fraud detection scenarios.
 
-Prerequisites
+---
 
-Google Cloud Account: Ensure you have access to a Google Cloud account with billing enabled.
+## Prerequisites
 
-APIs Enabled:
+Before diving into deployment, make sure you’ve got the essentials covered:
 
-Vertex AI API
+1. **Google Cloud Setup**:
+   - Active Google Cloud account with billing enabled.
+   - Required APIs activated:
+     - Vertex AI API
+     - Cloud Storage API
+     - BigQuery API (if using BigQuery for data storage).
 
-Cloud Storage API
+2. **Permissions**:
+   - Ensure your service account or user has these roles:
+     - Vertex AI Admin
+     - Storage Admin
+     - BigQuery Admin (if applicable).
 
-BigQuery API (if used for data storage)
+3. **Local Environment**:
+   - Install Google Cloud SDK and authenticate:
+     ```bash
+     gcloud auth login
+     gcloud auth application-default login
+     ```
+   - Configure your project:
+     ```bash
+     gcloud config set project [PROJECT_ID]
+     ```
 
-IAM Roles:
+---
 
-Ensure your user/service account has roles:
+## Deployment Workflow
 
-Vertex AI Admin
+### Step 1: Model Preparation
 
-Storage Admin
+1. **Train Your Model**:
+   - Use the training script in `src/model/trainer.py` to train the model.
+   - Ensure the trained model is saved in TensorFlow’s `SavedModel` format.
 
-BigQuery Admin (if applicable)
+2. **Save the Model**:
+   - Export the trained model:
+     ```python
+     import tensorflow as tf
+     model.save('path_to_model')
+     ```
+   - Upload it to your Google Cloud Storage bucket:
+     ```bash
+     gsutil cp -r path_to_model gs://[BUCKET_NAME]/models/[MODEL_NAME]
+     ```
 
-Environment Setup:
+---
 
-Install Google Cloud SDK.
+### Step 2: Model Deployment to Vertex AI
 
-Authenticate using:
+1. **Upload the Model**:
+   - Register the model with Vertex AI:
+     ```bash
+     gcloud ai models upload \
+       --region=us-central1 \
+       --display-name=[MODEL_NAME] \
+       --artifact-uri=gs://[BUCKET_NAME]/models/[MODEL_NAME] \
+       --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/tf2-cpu.2-11:latest
+     ```
 
-gcloud auth login
-gcloud auth application-default login
+2. **Deploy the Model to an Endpoint**:
+   - Create an endpoint:
+     ```bash
+     gcloud ai endpoints create \
+       --region=us-central1 \
+       --display-name=[ENDPOINT_NAME]
+     ```
+   - Deploy the model to the endpoint:
+     ```bash
+     gcloud ai endpoints deploy-model [ENDPOINT_ID] \
+       --region=us-central1 \
+       --model=[MODEL_ID] \
+       --display-name=[DEPLOYMENT_NAME] \
+       --machine-type=n1-standard-4
+     ```
 
-Set the project:
+---
 
-gcloud config set project [PROJECT_ID]
+### Step 3: Validate the Deployment
 
-Deployment Workflow
+1. **Test the Endpoint**:
+   - Use the endpoint for predictions:
+     ```python
+     from google.cloud import aiplatform
 
-Step 1: Prepare Model Artifact
+     endpoint = aiplatform.Endpoint(endpoint_name="projects/[PROJECT_ID]/locations/us-central1/endpoints/[ENDPOINT_ID]")
 
-Train the Model:
+     response = endpoint.predict(instances=[INPUT_DATA])
+     print(response.predictions)
+     ```
 
-Use the training pipeline in src/model/trainer.py.
+2. **Debugging Tips**:
+   - Use Vertex AI logs to troubleshoot:
+     ```bash
+     gcloud logging read "resource.type=ml_endpoint AND resource.labels.endpoint_id=[ENDPOINT_ID]"
+     ```
 
-Save the trained model locally or directly to a GCS bucket.
+---
 
-Export Model:
+### Step 4: Monitor the Model
 
-Save the trained model in a TensorFlow SavedModel format.
+1. **Enable Monitoring**:
+   - Set up data drift detection and latency monitoring:
+     ```bash
+     gcloud ai model-monitoring jobs create \
+       --region=us-central1 \
+       --endpoint=[ENDPOINT_ID] \
+       --display-name=[MONITOR_JOB_NAME] \
+       --input-data-schema="{schema JSON}" \
+       --target-field=[TARGET_FIELD]
+     ```
 
-import tensorflow as tf
-model.save('path_to_save_model')
+2. **Alerts and Notifications**:
+   - Use Cloud Monitoring or Pub/Sub for anomaly alerts.
 
-Upload the model to a GCS bucket:
+---
 
-gsutil cp -r path_to_save_model gs://[BUCKET_NAME]/models/[MODEL_NAME]
+### Step 5: Automate the Pipeline
 
-Step 2: Deploy Model to Vertex AI
+1. **CI/CD Integration**:
+   - Leverage the CI/CD workflow in `.github/workflows/ci-cd.yaml` to automate deployments.
 
-Create a Model Resource:
+2. **Vertex Pipelines**:
+   - Automate retraining, validation, and redeployment steps using Vertex Pipelines for a fully managed pipeline.
 
-Use the following command to upload the model to Vertex AI:
+---
 
-gcloud ai models upload \
-  --region=us-central1 \
-  --display-name=[MODEL_NAME] \
-  --artifact-uri=gs://[BUCKET_NAME]/models/[MODEL_NAME] \
-  --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/tf2-cpu.2-11:latest
-
-Deploy Model to Endpoint:
-
-Create an endpoint:
-
-gcloud ai endpoints create \
-  --region=us-central1 \
-  --display-name=[ENDPOINT_NAME]
-
-Deploy the model:
-
-gcloud ai endpoints deploy-model [ENDPOINT_ID] \
-  --region=us-central1 \
-  --model=[MODEL_ID] \
-  --display-name=[DEPLOYMENT_NAME] \
-  --machine-type=n1-standard-4
-
-Step 3: Test the Deployed Model
-
-Invoke Endpoint:
-
-Use the endpoint for predictions by sending JSON input data:
-
-from google.cloud import aiplatform
-
-endpoint = aiplatform.Endpoint(endpoint_name="projects/[PROJECT_ID]/locations/us-central1/endpoints/[ENDPOINT_ID]")
-
-response = endpoint.predict(instances=[INPUT_DATA])
-print(response.predictions)
-
-Validate Predictions:
-
-Ensure the predictions align with expected outputs and debug if necessary.
-
-Step 4: Enable Model Monitoring
-
-Set Up Monitoring:
-
-Enable drift and latency monitoring for the deployed model:
-
-gcloud ai model-monitoring jobs create \
-  --project=[PROJECT_ID] \
-  --region=us-central1 \
-  --display-name=[MONITOR_JOB_NAME] \
-  --endpoint=[ENDPOINT_ID] \
-  --input-data-schema="{schema JSON}" \
-  --target-field=[TARGET_FIELD]
-
-Configure Alerts:
-
-Set up notifications for anomalies through Cloud Monitoring or Pub/Sub.
-
-Step 5: Automate Pipeline
-
-CI/CD Workflow:
-
-Use the GitHub Actions YAML file located at .github/workflows/ci-cd.yaml.
-
-Integrate with Vertex Pipelines:
-
-Configure the pipeline to retrain, validate, and redeploy the model as needed.
-
-Additional Notes
-
-For custom Docker images, refer to infrastructure/docker/Dockerfile for building and pushing images to Google Container Registry.
-
-Monitor logs in Vertex AI:
-
-gcloud logging read "resource.type=ml_endpoint AND resource.labels.endpoint_id=[ENDPOINT_ID]"
-
-Scale endpoint traffic dynamically using:
-
-gcloud ai endpoints update [ENDPOINT_ID] --region=us-central1 --traffic-split=0=100
-
-This deployment ensures a production-grade pipeline with reliable predictions, robust monitoring, and easy scalability.
+This document combines hands-on deployment steps with best practices, enabling you to manage a production-ready fraud detection pipeline confidently.
